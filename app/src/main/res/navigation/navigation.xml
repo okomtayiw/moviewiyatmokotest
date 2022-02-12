@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/movie_navigation"
+    app:startDestination="@id/listMovieFragment">
+
+
+    <fragment
+        android:id="@+id/listMovieFragment"
+        android:name="com.testwiyatmoko.ui.ListMovieFragment"
+        android:label="fragment_list_movie"
+        tools:layout="@layout/fragment_list_movie" >
+        <action
+            android:id="@+id/action_listMovieFragment_to_detailMovieFragment"
+            app:destination="@id/detailMovieFragment" />
+        <action
+            android:id="@+id/action_listMovieFragment_to_searchMovieFragment"
+            app:destination="@id/searchMovieFragment" />
+    </fragment>
+    <fragment
+        android:id="@+id/detailMovieFragment"
+        android:name="com.testwiyatmoko.ui.DetailMovieFragment"
+        android:label="fragment_detail_movie"
+        tools:layout="@layout/fragment_detail_movie" >
+        <argument
+            android:name="id"
+            app:argType="integer"
+            android:defaultValue="0" />
+    </fragment>
+    <fragment
+        android:id="@+id/searchMovieFragment"
+        android:name="com.testwiyatmoko.ui.SearchMovieFragment"
+        android:label="fragment_search_movie"
+        tools:layout="@layout/fragment_search_movie" >
+        <action
+            android:id="@+id/action_searchMovieFragment_to_detailMovieFragment"
+            app:destination="@id/detailMovieFragment" />
+        <argument
+            android:name="id"
+            app:argType="integer"
+            android:defaultValue="0" />
+    </fragment>
+</navigation>
