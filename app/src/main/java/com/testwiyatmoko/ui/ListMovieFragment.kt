@@ -6,6 +6,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
@@ -24,6 +25,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 
+
 @AndroidEntryPoint
 class ListMovieFragment : Fragment() {
 
@@ -40,7 +42,7 @@ class ListMovieFragment : Fragment() {
         savedInstanceState: Bundle?
     ): View? {
         _binding = FragmentListMovieBinding.inflate(inflater, container, false)
-
+        (activity as AppCompatActivity?)!!.supportActionBar!!.hide()
         lifecycleScope.launchWhenStarted {
             networkListener = NetworkListener()
             networkListener.checkNetworkAvailability(requireContext())
