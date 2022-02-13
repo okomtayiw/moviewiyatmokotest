@@ -6,13 +6,13 @@ import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.os.Build
 import android.widget.Toast
-import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.*
 import com.testwiyatmoko.data.network.NetworkResult
 import com.testwiyatmoko.data.ResponseMovie
+import com.testwiyatmoko.data.database.entity.MoviesEntity
 import com.testwiyatmoko.repository.Repository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import retrofit2.Response
 import javax.inject.Inject
@@ -22,11 +22,21 @@ class PlayingNowViewModel @Inject constructor(
     private val repository: Repository,
     application: Application
 ) : AndroidViewModel(application) {
-
-    var responseMovie: MutableLiveData<NetworkResult<ResponseMovie>> = MutableLiveData()
-
     var networkStatus = false
     var backOnline = false
+
+    val readMovies: LiveData<List<MoviesEntity>> = repository.local.readMovies().asLiveData()
+
+
+    private fun insertMovies(moviesEntity: MoviesEntity) =
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.local.insertMovies(moviesEntity)
+        }
+
+
+    // retrofit
+    var responseMovie: MutableLiveData<NetworkResult<ResponseMovie>> = MutableLiveData()
+
 
 
     fun getPlayingMovie() = viewModelScope.launch {
@@ -35,6 +45,10 @@ class PlayingNowViewModel @Inject constructor(
             try {
                 val response = repository.remote.getMoviePlaying(1, "6bc90b57c5647cd87ee44270e4b52998")
                 responseMovie.value = handleResponsePlayingMovie(response)
+                val movies = responseMovie.value!!.data
+                if(movies != null) {
+                    offlineCacheMovies(movies)
+                }
             } catch (e: Exception) {
                 responseMovie.value = NetworkResult.Error("Not Found ")
             }
@@ -44,6 +58,12 @@ class PlayingNowViewModel @Inject constructor(
             responseMovie.value = NetworkResult.Error("No Internet Connection")
         }
 
+    }
+
+
+    private fun offlineCacheMovies(responseMovie: ResponseMovie) {
+        val moviesEntity= MoviesEntity(responseMovie)
+        insertMovies(moviesEntity)
     }
 
     private fun handleResponsePlayingMovie(response: Response<ResponseMovie>): NetworkResult<ResponseMovie>? {

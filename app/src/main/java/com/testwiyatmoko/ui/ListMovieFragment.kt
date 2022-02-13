@@ -13,15 +13,16 @@ import androidx.navigation.NavDirections
 import androidx.navigation.Navigation
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.testwiyatmoko.data.network.NetworkResult
 import com.testwiyatmoko.data.ResponseMovie
 import com.testwiyatmoko.data.Result
+import com.testwiyatmoko.data.network.NetworkResult
 import com.testwiyatmoko.databinding.FragmentListMovieBinding
 import com.testwiyatmoko.ui.adapter.MoviePlayingAdapter
 import com.testwiyatmoko.until.NetworkListener
 import com.testwiyatmoko.viewmodel.PlayingNowViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
 class ListMovieFragment : Fragment() {
@@ -39,8 +40,7 @@ class ListMovieFragment : Fragment() {
         savedInstanceState: Bundle?
     ): View? {
         _binding = FragmentListMovieBinding.inflate(inflater, container, false)
-        observeViewModel()
-        viewModel.getPlayingMovie()
+
         lifecycleScope.launchWhenStarted {
             networkListener = NetworkListener()
             networkListener.checkNetworkAvailability(requireContext())
@@ -48,6 +48,7 @@ class ListMovieFragment : Fragment() {
                     Log.d("NetworkListener", status.toString())
                     viewModel.networkStatus = status
                     viewModel.showNetworkStatus()
+                    readDatabase()
                 }
         }
 
@@ -78,6 +79,7 @@ class ListMovieFragment : Fragment() {
             }
             is NetworkResult.Error -> {
                 binding.progressView.visibility = View.GONE
+                loadDataFromCache()
                 Toast.makeText(
                     requireContext(),
                     dataResponse.message.toString(),
@@ -94,14 +96,9 @@ class ListMovieFragment : Fragment() {
 
     private fun postValue(results: List<Result>) {
         if (results != null) {
-            val recyclerView: RecyclerView = binding.recyclerView
-            linearLayoutManager = LinearLayoutManager(requireContext())
-            recyclerView.layoutManager = linearLayoutManager
-            adapter = MoviePlayingAdapter(requireContext(),results)
-            recyclerView.adapter = adapter
-            recyclerView.setHasFixedSize(true)
-
-            adapter.setOnclicklistener(object : MoviePlayingAdapter.OnClickListener{
+            adapter = MoviePlayingAdapter(requireContext(), results)
+            setupRecyclerView()
+            adapter.setOnclicklistener(object : MoviePlayingAdapter.OnClickListener {
                 override fun onClick(position: Int, model: Result) {
                     gotoDetailMovie(model.id)
 //                    Toast.makeText(requireContext(),model.id.toString(),Toast.LENGTH_LONG).show()
@@ -111,17 +108,68 @@ class ListMovieFragment : Fragment() {
         }
     }
 
-    private fun gotoDetailMovie(id: Int){
-        val action: NavDirections = ListMovieFragmentDirections.actionListMovieFragmentToDetailMovieFragment(id)
+    private fun setupRecyclerView() {
+        val recyclerView: RecyclerView = binding.recyclerView
+        linearLayoutManager = LinearLayoutManager(requireContext())
+        recyclerView.layoutManager = linearLayoutManager
+        recyclerView.adapter = adapter
+        recyclerView.setHasFixedSize(true)
+    }
+
+    private fun readDatabase() {
+        lifecycleScope.launch {
+            viewModel.readMovies.observe(viewLifecycleOwner) { database ->
+                if (database.isNotEmpty()) {
+                    adapter = MoviePlayingAdapter(
+                        requireContext(),
+                        database.first().responseMovie.results
+                    )
+                    setupRecyclerView()
+                    binding.progressView.visibility = View.GONE
+
+                    adapter.setOnclicklistener(object : MoviePlayingAdapter.OnClickListener {
+                        override fun onClick(position: Int, model: Result) {
+                            gotoDetailMovie(model.id)
+                        }
+                    })
+                } else {
+                    observeViewModel()
+                }
+            }
+        }
+    }
+
+    private fun loadDataFromCache() {
+        lifecycleScope.launch {
+            viewModel.readMovies.observe(viewLifecycleOwner) { database ->
+                adapter = MoviePlayingAdapter(
+                    requireContext(),
+                    database.first().responseMovie.results
+                )
+                setupRecyclerView()
+                binding.progressView.visibility = View.GONE
+
+                adapter.setOnclicklistener(object : MoviePlayingAdapter.OnClickListener {
+                    override fun onClick(position: Int, model: Result) {
+                        gotoDetailMovie(model.id)
+                    }
+                })
+
+            }
+        }
+    }
+
+    private fun gotoDetailMovie(id: Int) {
+        val action: NavDirections =
+            ListMovieFragmentDirections.actionListMovieFragmentToDetailMovieFragment(id)
         Navigation.findNavController(binding.recyclerView).navigate(action)
 
     }
 
-    private fun gotoSearchMovie(){
-        val action: NavDirections = ListMovieFragmentDirections.actionListMovieFragmentToSearchMovieFragment()
+    private fun gotoSearchMovie() {
+        val action: NavDirections =
+            ListMovieFragmentDirections.actionListMovieFragmentToSearchMovieFragment()
         Navigation.findNavController(binding.toSearch).navigate(action)
 
     }
-
-
 }
